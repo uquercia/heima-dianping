@@ -38,6 +38,8 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
     private VoucherOrderMapper voucherOrderMapper;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private SimpleRedisLock simpleRedisLock;
 
     @Transactional
     @Override
@@ -71,9 +73,9 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
 //        }
 
         //上分布式锁 - 为每个用户创建独立的锁
-        SimpleRedisLock lock = new SimpleRedisLock(stringRedisTemplate, "order:" + userId);
-        boolean isLock = lock.tryLock(120L);
+        boolean isLock = simpleRedisLock.tryLock(120L);
         if (!isLock) {throw new BusinessException("获取锁失败");}
+        log.debug("获取锁");
         try{
             //把自带的aop代理对象 注入spring 这样就可以在代理对象上加锁 让事务生效
             ISeckillVoucherService proxy = (ISeckillVoucherService) AopContext.currentProxy();
@@ -82,7 +84,8 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
             log.error("下单失败：", e);
             throw new BusinessException("下单异常，请重试");
         }finally {
-            lock.unlock();
+            log.debug("释放锁");
+            simpleRedisLock.unlock();
         }
     }
     public VoucherOrder getVoucherOrder(Long voucherId, SeckillVoucher seckillVoucher, Long userId) {
