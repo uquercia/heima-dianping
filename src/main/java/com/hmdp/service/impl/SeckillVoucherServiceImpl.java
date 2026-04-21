@@ -80,7 +80,7 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
 
         //上分布式锁 - 为每个用户创建独立的锁
 //        boolean isLock = simpleRedisLock.tryLock(120L);
-        RLock lock = redissonClient.getLock(RedisConstants.LOCK_ORDER_KEY + voucherId);
+        RLock lock = redissonClient.getLock(RedisConstants.LOCK_ORDER_KEY + userId);
         boolean isLock = lock.tryLock(RedisConstants.LOCK_ORDER_WAIT_TIME, RedisConstants.LOCK_ORDER_LEASE_TIME, TimeUnit.SECONDS);
         if (!isLock) {throw new BusinessException("获取锁失败");}
         log.debug("redisson获取锁");
