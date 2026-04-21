@@ -11,7 +11,7 @@ import com.hmdp.entity.VoucherOrder;
  * @since 2021-12-22
  */
 public interface ISeckillVoucherService extends IService<SeckillVoucher> {
-    VoucherOrder seckillVoucher(Long voucherId);
+    VoucherOrder seckillVoucher(Long voucherId) throws InterruptedException;
 
     VoucherOrder getVoucherOrder(Long voucherId, SeckillVoucher seckillVoucher,Long userId);
 }

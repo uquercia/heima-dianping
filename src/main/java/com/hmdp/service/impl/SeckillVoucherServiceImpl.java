@@ -10,9 +10,12 @@ import com.hmdp.mapper.SeckillVoucherMapper;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmdp.utils.redis.RedisConstants;
 import com.hmdp.utils.redis.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
 import com.hmdp.utils.redis.SimpleRedisLock;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 秒杀优惠券表，与优惠券是一对一关系 服务实现类
@@ -40,10 +44,12 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
     private StringRedisTemplate stringRedisTemplate;
     @Resource
     private SimpleRedisLock simpleRedisLock;
+    @Resource
+    private RedissonClient redissonClient;
 
     @Transactional
     @Override
-    public VoucherOrder seckillVoucher(Long voucherId) {
+    public VoucherOrder seckillVoucher(Long voucherId) throws InterruptedException {
         SeckillVoucher seckillVoucher = seckillVoucherMapper.selectById(voucherId);
         if (Objects.isNull(seckillVoucher)) {
             log.debug("seckillVoucher is null");
@@ -73,9 +79,11 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
 //        }
 
         //上分布式锁 - 为每个用户创建独立的锁
-        boolean isLock = simpleRedisLock.tryLock(120L);
+//        boolean isLock = simpleRedisLock.tryLock(120L);
+        RLock lock = redissonClient.getLock(RedisConstants.LOCK_ORDER_KEY + voucherId);
+        boolean isLock = lock.tryLock(RedisConstants.LOCK_ORDER_WAIT_TIME, RedisConstants.LOCK_ORDER_LEASE_TIME, TimeUnit.SECONDS);
         if (!isLock) {throw new BusinessException("获取锁失败");}
-        log.debug("获取锁");
+        log.debug("redisson获取锁");
         try{
             //把自带的aop代理对象 注入spring 这样就可以在代理对象上加锁 让事务生效
             ISeckillVoucherService proxy = (ISeckillVoucherService) AopContext.currentProxy();
@@ -84,8 +92,8 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
             log.error("下单失败：", e);
             throw new BusinessException("下单异常，请重试");
         }finally {
-            log.debug("释放锁");
-            simpleRedisLock.unlock();
+            log.debug("redisson释放锁");
+            lock.unlock();
         }
     }
     public VoucherOrder getVoucherOrder(Long voucherId, SeckillVoucher seckillVoucher, Long userId) {
