@@ -28,7 +28,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 服务实现类
@@ -106,8 +105,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         String tokenKey = RedisConstants.LOGIN_USER_KEY+token;
         stringRedisTemplate.opsForHash().putAll(tokenKey, stringMap);
-        //设置有效期
-        stringRedisTemplate.expire(tokenKey, RedisConstants.LOGIN_USER_TTL, TimeUnit.SECONDS);
         return token;
     }
 
