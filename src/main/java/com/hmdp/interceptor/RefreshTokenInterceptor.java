@@ -53,7 +53,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         //把用户的信息存入上下文UserHolder
         UserHolder.saveUser(userDTO);
         //放行
-        log.debug("把用户：{}存入了上下文，通过拦截器refresh",userDTO);
+//        log.debug("把用户：{}存入了上下文，通过拦截器refresh",userDTO);
         return true;
     }
     //程序结束前处理

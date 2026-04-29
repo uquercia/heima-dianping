@@ -28,10 +28,10 @@ public class LoginInterceptor implements HandlerInterceptor {
         UserDTO user = UserHolder.getUser();
         if (Objects.isNull(user)) {
             response.setStatus((int)CommonErrorEnum.UNAUTHORIZED.getCode());
-            log.debug("通过拦截器失败");
+//            log.debug("通过拦截器失败");
             return false;
         }else {
-            log.debug("通过拦截器登陆成功");
+//            log.debug("通过拦截器登陆成功");
             return true;
         }
     }
